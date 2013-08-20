@@ -42,6 +42,8 @@ def parse_date_tstamp(fname):
     # time of last modification
     if os.name == 'nt':  # windows allows direct access to creation date
         creation_time = os.path.getctime(fname)
+    elif os.name == 'posix': #in linux it's best to use mtime
+        creation_time = os.path.getmtime(fname)
     else:
         creation_time = get_creation_time(fname)
 
@@ -88,7 +90,7 @@ SortType = enum('Year', 'YearMonth', 'YearMonthDay')
 
 # --------- main script -----------------
 
-def sortPhotos(src_dir, dest_dir, extensions, sort_type, move_files, removeDuplicates):
+def sortPhotos(src_dir, dest_dir, extensions, sort_type, move_files, removeDuplicates, use_filestamp):
 
 
     # some error checking
@@ -143,7 +145,7 @@ def sortPhotos(src_dir, dest_dir, extensions, sort_type, move_files, removeDupli
         # get extension for types that may have EXIF data
         root, ext = os.path.splitext(src_file)
 
-        if ext.lower() in ['.jpg', '.tiff']:
+        if ext.lower() in ['.jpg', '.tiff'] or use_filestamp:
 
             tags = exif.process_file(f, details=False)
 
@@ -230,7 +232,8 @@ if __name__ == '__main__':
                                      description='Sort files (primarily photos) into folders by date\nusing EXIF data if possible and file creation date if not')
     parser.add_argument('src_dir', type=str, help='source directory (searched recursively)')
     parser.add_argument('dest_dir', type=str, help='destination directory')
-    parser.add_argument('-m', '--move', action='store_true', help='move files instead of copy')
+    parser.add_argument('-m', '--move', action='store_true', default=False, help='move files instead of copy')
+    parser.add_argument('-f', '--filestamp', action='store_true', default=False, help='Always use the file creation time, never the EXIF')
     parser.add_argument('-s', '--sort', type=str, choices=['y', 'm', 'd'], default='m',
                         help='choose destination folder structure\n\ty: sort by year\n\tm: sort by year then month\n\td: sort by year then month then day')
     parser.add_argument('--keep-duplicates', action='store_true',
@@ -251,7 +254,7 @@ if __name__ == '__main__':
         sort_type = SortType.YearMonthDay
 
     sortPhotos(args.src_dir, args.dest_dir, args.extensions, sort_type,
-              args.move, not args.keep_duplicates)
+              args.move, not args.keep_duplicates, args.filestamp)
 
 
 
